@@ -1,6 +1,6 @@
 # web-security-academy-labs
 
-► A Interactive way to complete [PortSwigger's](https://portswigger.net/web-security/learning-path) Web security academy lab exercises.
+► A Interactive way to complete [PortSwigger's Web security academy](https://portswigger.net/web-security/learning-path) lab exercises.
 
 ## Getting Started
 
