@@ -9,7 +9,7 @@
    git clone https://github.com/VasanthVanan/web-security-academy-labs.git
    ```
 2. Navigate to the project directory: 
-   ```
+   ```bash
    cd web-security-academy-labs
    ```
 3. Install the packages if any: 

