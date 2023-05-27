@@ -188,7 +188,7 @@ def main():
     print("\n"+table)
 
     try:
-        choice = input("\n"+textcolor.WARNING+"Enter your Lab (1-7): "+textcolor.ENDC)
+        choice = input("\n"+textcolor.WARNING+"Enter your Lab (1-5): "+textcolor.ENDC)
         #choice = 2
     except:
         print(textcolor.DANGER+"\nInvalid Input\n"+textcolor.ENDC)
