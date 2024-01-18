@@ -54,14 +54,14 @@ def get_input(data):
 
     try:
         choice = input(append_colors("\nEnter your Lab (1-{}): ", textcolor.WARNING).format(len(data)))
-        return [int(choice), url]
+        return [int(choice), url.rstrip('/')]
     except:
         sys.exit(append_colors("\nInvalid Input\n",textcolor.DANGER))
 
-def http_request(base_url, path, payload):
+def http_request(base_url, path, data):
     # This is a common function used to send HTTP requests with customized payloads
-    payload_data = {'stockApi': payload}
-    headers_data = {'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': str(len(payload_data))}
+    payload_data = data[0]
+    headers_data = data[1] 
     try:
         response = requests.post(base_url + path, data=payload_data, headers=headers_data, timeout=3)
         return response
