@@ -2,7 +2,6 @@
 
 ► A Interactive way to complete [PortSwigger's Web security academy](https://portswigger.net/web-security/learning-path) lab exercises.
 
-> Note:
 > - Repository only contain challenges that were present at the time of completion as new challenges are continually introduced.
 > - Challenges that require the need of burp collaborator client are omitted due to limitation of the burp community version.
 
