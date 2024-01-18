@@ -1,5 +1,6 @@
 from urllib.parse import urlparse
 from tabulate import tabulate
+import requests
 import sys
 
 class textcolor:
@@ -14,16 +15,19 @@ class textcolor:
     UNDERLINE = '\033[4m'
 
 def validate_url(url):
+    # This function validates the URL entered by the user
     parsed_url = urlparse(url)
+    
     if parsed_url.scheme and parsed_url.netloc:
         return True
     return False
 
 def append_colors(text, color):
+    # This function appends color to the text entered by the user
     return "{}{}{}".format(color,text,textcolor.ENDC)
 
 def get_input(data):
-
+    # This function generates the table and gets the user input
     headers = [append_colors("Labs",textcolor.OKGREEN),append_colors("Title", textcolor.OKGREEN)]
 
     data = [
@@ -53,3 +57,22 @@ def get_input(data):
         return [int(choice), url]
     except:
         sys.exit(append_colors("\nInvalid Input\n",textcolor.DANGER))
+
+def http_request(base_url, path, payload):
+    # This is a common function used to send HTTP requests with customized payloads
+    payload_data = {'stockApi': payload}
+    headers_data = {'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': str(len(payload_data))}
+    try:
+        response = requests.post(base_url + path, data=payload_data, headers=headers_data, timeout=3)
+        return response
+
+    except requests.exceptions.ConnectTimeout as e:
+        return 1
+    except requests.exceptions.RequestException as e:
+        print(append_colors("\nError occurred: ",textcolor.DANGER))
+        print(f"{str(e)}\n")
+    except Exception as e:
+        print(append_colors("\nUnexpected error occurred:",textcolor.DANGER))
+        print(f"{str(e)}\n")
+
+    return 0
