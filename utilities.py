@@ -76,3 +76,12 @@ def http_request(base_url, path, data):
         print(f"{str(e)}\n")
 
     return 0
+
+def highlight_text(text, compare_list):
+    # This function highlights the text entered by the user
+    text_lines = text.split('\n')
+    for i in text_lines:
+        if any(x in i for x in compare_list):
+            print(append_colors(i, textcolor.DANGER))
+        else:
+            print(i)
